@@ -1,0 +1,44 @@
+# Binaries and evidence must never be committed.
+
+# The application under examination.
+lab/target/**
+!lab/target/.gitkeep
+
+# Analyst outputs: evidence, doctor catalog, xrefs, notes.
+lab/analysis/**
+!lab/analysis/.gitkeep
+
+# Generated specification. It is per target and must not carry addresses back into git.
+lab/handoff/**
+!lab/handoff/.gitkeep
+
+# Verifier inputs and outputs (run-team.sh writes these from lab/).
+lab/rebuild/
+lab/report.md
+rebuild/
+report.md
+
+# Clean-room copies and rebuilder output.
+clean/SPEC.md
+clean/QUESTIONS.md
+clean/ATTRIBUTION.md
+clean/src/**
+!clean/src/.gitkeep
+
+# Dependency and editor junk, in either room.
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# Common target binaries, wherever they are dropped.
+*.exe
+*.dll
+*.so
+*.dylib
+*.apk
+*.asar
+*.wasm
+*.pdb
+*.bin
+*.node

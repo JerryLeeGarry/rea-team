@@ -1,0 +1,15 @@
+{
+  "name": "rea-clean",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "rea-clean",
+  "workspaceFolder": "/work",
+  "workspaceMount": "source=${localWorkspaceFolder}/clean,target=/work,type=bind,consistency=delegated",
+  "remoteUser": "node",
+  "overrideCommand": false,
+  "postStartCommand": "sudo -n /usr/local/bin/init-firewall.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  }
+}
