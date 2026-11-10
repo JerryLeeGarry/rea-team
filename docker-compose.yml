@@ -1,0 +1,41 @@
+# Clean room for the Rebuilder. The container name is rea-clean because
+# run-team.sh calls `docker exec rea-clean` and `docker cp ... rea-clean:/work`.
+#
+# The only project bind mount is ./clean -> /work. lab/, target/, and analysis/
+# stay on the host. Do not add the repo root, the Docker socket, or $HOME.
+#
+# ALLOW_NPM defaults to 1 so the first boot can reach registry.npmjs.org.
+# After dependency install, remove the registry from the allowlist:
+#
+#   ALLOW_NPM=0 docker compose up -d --build --force-recreate
+#
+# Then run scripts/check-wall.sh. See .devcontainer/init-firewall.sh.
+
+name: rea-team
+
+services:
+  rea-clean:
+    container_name: rea-clean
+    image: rea-clean:local
+    build:
+      context: ./.devcontainer
+      dockerfile: Dockerfile
+      args:
+        ALLOW_NPM: ${ALLOW_NPM:-1}
+        CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-latest}
+        TZ: ${TZ:-UTC}
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./clean:/work:rw
+      - rea-clean-claude:/home/node/.claude
+    working_dir: /work
+    environment:
+      CLAUDE_CONFIG_DIR: /home/node/.claude
+    init: true
+    stdin_open: true
+    tty: true
+
+volumes:
+  rea-clean-claude:
