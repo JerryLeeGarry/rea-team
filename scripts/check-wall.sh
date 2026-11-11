@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run the three clean-room wall checks inside rea-clean.
-# The script passes only when every one of them fails:
+# The script also requires ALLOW_NPM=0. It passes only when all three fail:
 #   which rea
 #   npx --no-install rea-agents --version
 #   ls /lab /target 2>&1
@@ -54,7 +54,8 @@ expect_fail "ls /lab /target" "ls /lab /target 2>&1"
 allow="$(docker exec "$CONTAINER" cat /etc/rea-clean/allow-npm 2>/dev/null || true)"
 allow="${allow//$'\n'/}"
 if [[ "$allow" != "0" ]]; then
-  echo "note: npm registry is still on the allowlist (ALLOW_NPM=${allow:-unset}). After dependency install, rebuild with ALLOW_NPM=0. See README."
+  echo "WALL OPEN: expected ALLOW_NPM=0, got ${allow:-unset}. After dependency install, rebuild with ALLOW_NPM=0. See README." >&2
+  status=1
 fi
 
 exit "$status"

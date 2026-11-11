@@ -19,23 +19,35 @@ if ! docker inspect -f '{{.State.Running}}' rea-clean 2>/dev/null | grep -qx tru
   exit 1
 fi
 TARGET="$1"; FEATURE="$2"; MAX_ROUNDS=3
-cd "$(dirname "$0")/lab"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT/lab"
 
 claude -p "$(printf 'Use the analyst agent on %s. Feature: %s' "$TARGET" "$FEATURE")"
 claude -p "Use the spec-writer agent to write handoff/SPEC.md from analysis/evidence.md"
 
 for round in $(seq 1 "$MAX_ROUNDS"); do
-  if grep -nEi '0x[0-9a-f]{5,}|sub_[0-9a-f]+|var_[0-9a-f]+|FUN_[0-9a-f]+' handoff/SPEC.md; then
-    echo "spec leaks decompiled names, stopping"; exit 1
-  fi
-
-  docker cp handoff/SPEC.md rea-clean:/work/SPEC.md
+  REA_CLEAN_CONTAINER=rea-clean "$ROOT/scripts/check-wall.sh"
+  "$ROOT/scripts/handoff.sh"
   docker exec rea-clean claude -p "Use the rebuilder agent on /work/SPEC.md"
   rm -rf rebuild && docker cp rea-clean:/work/src ./rebuild
 
+  # Require a fresh report from this round, not a previous verifier run.
+  rm -f report.md
   claude -p "Use the verifier agent."
-  tail -n 1 report.md
-  grep -q 'RESULT wrong=0 crash=0' report.md && { echo "parity reached in round $round"; exit 0; }
+  if [[ ! -f report.md || ! -s report.md ]]; then
+    echo "verifier did not write a non-empty report.md" >&2
+    exit 1
+  fi
+  result="$(tail -n 1 report.md)"
+  printf '%s\n' "$result"
+  if [[ ! "$result" =~ ^RESULT\ wrong=[0-9]+\ crash=[0-9]+$ ]]; then
+    echo "report.md must end with RESULT wrong=<n> crash=<n>" >&2
+    exit 1
+  fi
+  if [[ "$result" == "RESULT wrong=0 crash=0" ]]; then
+    echo "parity reached in round $round"
+    exit 0
+  fi
 
   claude -p "Use the spec-writer agent to add every wrong or crash divergence in report.md as a case under Test Cases in handoff/SPEC.md"
 done

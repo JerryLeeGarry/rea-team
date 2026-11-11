@@ -133,7 +133,7 @@ ALLOW_NPM=0 docker compose up -d --build --force-recreate
 docker exec rea-clean curl -I --connect-timeout 5 https://registry.npmjs.org
 ```
 
-再跑墙检查。三条命令全部失败，脚本才算通过：
+再跑墙检查。三条命令全部失败，并且容器内的 `ALLOW_NPM` 标志为 `0`，脚本才算通过：
 
 ```bash
 scripts/check-wall.sh
@@ -147,7 +147,7 @@ ok: npx --no-install rea-agents --version failed inside rea-clean
 ok: ls /lab /target failed inside rea-clean
 ```
 
-`ALLOW_NPM` 仍是 `1` 时，脚本会多打一行提醒，但通过与否只看上面三条。给 Rebuilder 开工之前，提醒必须消失（也就是已经用 `ALLOW_NPM=0` 重建过）。
+`ALLOW_NPM` 仍是 `1`、标志文件缺失或读取失败时，脚本会以非零状态退出。给 Rebuilder 开工之前，必须用 `ALLOW_NPM=0` 重建容器并通过检查。
 
 容器里的 Claude 需要自己的登录，不要把宿主机的 `~/.claude` 挂进去：
 
@@ -192,7 +192,7 @@ docker exec -it -u node rea-clean claude
    ./run-team.sh target/YourApp "how search ranks results"
    ```
 
-   脚本最多三轮：Analyst → Spec Writer →（泄漏检查失败就停）→ 容器里的 Rebuilder → Verifier。`report.md` 最后一行是 `RESULT wrong=0 crash=0` 时结束。三轮之后仍有 `wrong` 或 `crash`，脚本以状态码 2 退出，留下 `lab/report.md` 给你看。
+   脚本先运行 Analyst → Spec Writer，再最多重建、验证三轮。每轮先通过墙检查，再用 `scripts/handoff.sh` 检查非空规格和泄漏、复制规格并设为只读，然后运行容器里的 Rebuilder → Verifier。验证前删除旧报告；本轮必须生成非空的 `report.md`，且最后一行严格符合 `RESULT wrong=<n> crash=<n>`。最后一行是 `RESULT wrong=0 crash=0` 时结束。三轮之后仍有 `wrong` 或 `crash`，脚本以状态码 2 退出，留下 `lab/report.md` 给你看。
 
 Verifier 会执行原始程序。放进 `lab/target/` 的程序应当是你愿意在这台机器上运行的；拿不准时，先在虚拟机或沙箱里跑 Verifier 那一侧。
 
