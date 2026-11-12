@@ -14,7 +14,7 @@ if ! command -v docker >/dev/null 2>&1; then
   echo "docker is not on PATH" >&2
   exit 1
 fi
-if ! docker inspect -f '{{.State.Running}}' rea-clean 2>/dev/null | grep -qx true; then
+if ! running="$(docker inspect -f '{{.State.Running}}' rea-clean 2>/dev/null)" || [[ "$running" != 'true' ]]; then
   echo "container rea-clean is not running. From the repo root: docker compose up -d --build" >&2
   exit 1
 fi
@@ -27,7 +27,7 @@ claude -p "Use the spec-writer agent to write handoff/SPEC.md from analysis/evid
 
 for round in $(seq 1 "$MAX_ROUNDS"); do
   REA_CLEAN_CONTAINER=rea-clean "$ROOT/scripts/check-wall.sh"
-  "$ROOT/scripts/handoff.sh"
+  "$ROOT/scripts/handoff.sh" "$ROOT/lab/handoff/SPEC.md" "$ROOT/clean/SPEC.md"
   docker exec rea-clean claude -p "Use the rebuilder agent on /work/SPEC.md"
   rm -rf rebuild && docker cp rea-clean:/work/src ./rebuild
 
